@@ -1,7 +1,19 @@
 class Graphic{
-    constructor(canvas){
+    constructor(canvas, options){
         this.context = canvas.getContext(`2d`);
         this.canvas = canvas;
+        this.model_field = 'model';
+        this.price_field = 'price';
+        this.drive_field = 'drive';
+        this.text_color = '#222222';
+        this.lines_color = '#AAAAAA';
+        this.circles_color = '#555555';
+        this.first_drives = [
+            {drive: 'FWD', color: '#00B050'},
+            {drive: '4WD', color: '#FF0000'}
+        ];
+        this.radius = 8;
+        Object.assign(this, options);
         this.canvas.addEventListener('click', this.click_handle.bind(this));
     }
     click_handle(event){
@@ -13,7 +25,7 @@ class Graphic{
             let y1 = obj.y + this.radius, y2 = obj.y - this.radius;
             if(x > x2 && x < x1 && y > y2 && y < y1){
                 let auto = {};
-                Object.assign(auto, this.data[obj.index]);
+                Object.assign(auto, this.data[obj.model][obj.index]);
                 auto.price = this.price_format(auto.price);
                 this.callback(auto);
             }
@@ -23,20 +35,23 @@ class Graphic{
         this.callback = callback;
     }
     init(data){
-        this.models = new Map();
-        this.data = data
+        this.data = {};
         this.min_price = 0;
         this.max_price = 0;
         for(let elem of data){
-            if(!this.models.has(elem.model)){
-                this.models.set(elem.model, this.models.size);
+            if(!this.data[elem[this.model_field]]){
+                this.data[elem[this.model_field]] = [];
             }
-            if(this.min_price == 0 || this.min_price > elem.price){
-                this.min_price = elem.price;
+            this.data[elem[this.model_field]].push(elem);
+            if(this.min_price == 0 || this.min_price > elem[this.price_field]){
+                this.min_price = elem[this.price_field];
             }
-            if(this.max_price == 0 || this.max_price < elem.price){
-                this.max_price = elem.price;
+            if(this.max_price == 0 || this.max_price < elem[this.price_field]){
+                this.max_price = elem[this.price_field];
             }
+        }
+        for(let model in this.data){
+            this.data[model].sort(this.price_compare.bind(this));
         }
         let precision = 100000
         this.min_price = Math.floor(this.min_price / precision) * precision;
@@ -44,9 +59,11 @@ class Graphic{
         this.precision = precision;
         this.xOffset = 80;
         this.yOffset = 50;
-        this.volume = (this.canvas.width - this.xOffset) * (this.canvas.height - 2 * this.yOffset);
-        this.radius = Math.min(8, Math.sqrt(this.volume / this.models.size / 2));
-        this.mid_width = (this.canvas.width - this.xOffset) / this.models.size;
+        this.models = Object.keys(this.data);
+        this.mid_width = (this.canvas.width - this.xOffset) / this.models.length;
+    }
+    price_compare(obj1, obj2){
+        return obj1[this.price_field] - obj2[this.price_field];
     }
     price_format(price){
         price = price.toString()
@@ -59,15 +76,22 @@ class Graphic{
         }
         return res.join(' ');
     }
+    set_color(color){
+        this.context.fillStyle = color;
+        this.context.strokeStyle = color;
+    }
     draw_models(){
         this.context.font = "italic 15pt Arial";
         let mid_width = this.mid_width;
-        for(let pair of this.models){
-            let offset = mid_width / 2 - pair[0].length * 5;
-            this.context.fillText(pair[0], this.xOffset + pair[1] * mid_width + offset, 30);
+        for(let i = 0; i < this.models.length; ++i){
+            let model = this.models[i];
+            let offset = mid_width / 2 - model.length * 5;
+            this.set_color(this.text_color);
+            this.context.fillText(model, this.xOffset + i * mid_width + offset, 30);
             this.context.beginPath();
-            this.context.moveTo(this.xOffset + pair[1] * mid_width, 0);
-            this.context.lineTo(this.xOffset + pair[1] * mid_width, this.canvas.height);
+            this.context.moveTo(this.xOffset + i * mid_width, 0);
+            this.context.lineTo(this.xOffset + i * mid_width, this.canvas.height);
+            this.set_color(this.lines_color);
             this.context.stroke();
         }
     }
@@ -78,10 +102,12 @@ class Graphic{
         for(let i = 0; i <= count; ++i){
             let offset = height * i + this.yOffset;
             let current_price = this.min_price + i * this.precision
+            this.set_color(this.text_color);
             this.context.fillText(this.price_format(current_price), 10, offset);
             this.context.beginPath();
             this.context.moveTo(this.xOffset, offset - 4);
             this.context.lineTo(this.canvas.width, offset - 4);
+            this.set_color(this.lines_color);
             this.context.stroke();
         }
     }
@@ -92,18 +118,35 @@ class Graphic{
         let y_line = this.canvas.height - this.yOffset * 2;
         let divider = price_line / y_line;
         let mid_width = this.mid_width;
-        let color = '#777777';
-        this.context.fillStyle = color;
-        this.context.strokeColor = color;
+        let max_amount = Math.floor((mid_width - 10) / (this.radius + 2) / 2);
         this.points = [];
-        for(let i = 0; i < this.data.length; ++i){
-            let auto = this.data[i];
-            let x = this.xOffset + this.models.get(auto.model) * mid_width + mid_width / 2;
-            let y = (auto.price - this.min_price) / divider + this.yOffset;
-            this.points.push({x: x, y: y, index: i});
-            this.context.beginPath();
-            this.context.arc(x, y, this.radius, 0, 2 * Math.PI, false);
-            this.context.fill();
+        for(let model_index = 0; model_index < this.models.length; ++model_index){
+            const model = this.models[model_index];
+            let counter = 0;
+            let drives = {};
+            for(let elem of this.first_drives){
+                drives[elem.drive] = {color: elem.color, was: false};
+            }
+            for(let auto_index = 0; auto_index < this.data[model].length; ++auto_index){
+                this.set_color(this.circles_color);
+                let auto = this.data[model][auto_index];
+                if(drives[auto[this.drive_field]].was == false){
+                    drives[auto[this.drive_field]].was = true
+                    this.set_color(drives[auto[this.drive_field]].color);
+                }
+                let offset = 2 * (this.radius + 2) * counter + this.radius + 5;
+                let x = this.xOffset + model_index * mid_width + offset;
+                let y = (auto[this.price_field] - this.min_price) / divider + this.yOffset;
+                this.points.push({x: x, y: y, index: auto_index, model: model});
+                this.context.beginPath();
+                this.context.arc(x, y, this.radius, 0, 2 * Math.PI, false);
+                this.context.fill();
+                if(counter == max_amount - 1){
+                    counter = 0;
+                }else{
+                    ++counter;
+                }
+            }
         }
     }
 }
