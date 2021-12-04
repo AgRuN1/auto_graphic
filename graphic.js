@@ -3,8 +3,10 @@ class Graphic{
         this.context = canvas.getContext(`2d`);
         this.canvas = canvas;
         this.model_field = 'model';
+        this.name_field = 'name';
         this.price_field = 'price';
         this.drive_field = 'drive';
+        this.unique = true;
         this.text_color = '#222222';
         this.lines_color = '#AAAAAA';
         this.circles_color = '#555555';
@@ -12,7 +14,7 @@ class Graphic{
             {drive: 'FWD', color: '#00B050'},
             {drive: '4WD', color: '#FF0000'}
         ];
-        this.radius = 8;
+        this.radius = 7;
         Object.assign(this, options);
         this.canvas.addEventListener('click', this.click_handle.bind(this));
     }
@@ -42,7 +44,18 @@ class Graphic{
             if(!this.data[elem[this.model_field]]){
                 this.data[elem[this.model_field]] = [];
             }
-            this.data[elem[this.model_field]].push(elem);
+            let flag = true;
+            if(this.unique){
+                for(let i = 0; i < this.data[elem[this.model_field]].length; ++i){
+                    if(this.data[elem[this.model_field]][i][this.name_field] == elem[this.name_field]){
+                        flag = false;
+                        break;
+                    }
+                }
+            }
+            if(flag){
+                this.data[elem[this.model_field]].push(elem);
+            }
             if(this.min_price == 0 || this.min_price > elem[this.price_field]){
                 this.min_price = elem[this.price_field];
             }
@@ -118,7 +131,7 @@ class Graphic{
         let y_line = this.canvas.height - this.yOffset * 2;
         let divider = price_line / y_line;
         let mid_width = this.mid_width;
-        let max_amount = Math.floor((mid_width - 10) / (this.radius + 2) / 2);
+        let max_amount = Math.floor((mid_width - 10) / (this.radius + 0.5) / 2);
         this.points = [];
         for(let model_index = 0; model_index < this.models.length; ++model_index){
             const model = this.models[model_index];
@@ -134,7 +147,7 @@ class Graphic{
                     drives[auto[this.drive_field]].was = true
                     this.set_color(drives[auto[this.drive_field]].color);
                 }
-                let offset = 2 * (this.radius + 2) * counter + this.radius + 5;
+                let offset = 2 * (this.radius + 0.5) * counter + this.radius + 5;
                 let x = this.xOffset + model_index * mid_width + offset;
                 let y = (auto[this.price_field] - this.min_price) / divider + this.yOffset;
                 this.points.push({x: x, y: y, index: auto_index, model: model});
