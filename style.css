@@ -1,0 +1,53 @@
+#field{
+    margin-left: 50%;
+    transform: translateX(-50%);
+    border: 2px solid #AAAAAA;
+}
+html, body{
+    overflow-x: hidden;
+}
+.container{
+    margin-left: 7%;
+    margin-top: 12px; 
+}
+.tip{
+    padding: 10px; 
+    color: white;
+    border-radius: 7px;
+    margin-top: 5px
+}
+.fwd{
+    background-color: #00B050;
+}
+.at{
+    background-color: #FF0000;
+}
+.tooltip{
+    position: absolute;
+    background-color: black;
+    opacity: 0.7;
+    color: white;
+    border-radius: 5px;
+    padding: 0px 7px 0px 7px;
+}
+.tooltip.arrow-left:before {
+    content: "";
+    position:absolute;
+    left:-20px;
+    top:50%;
+    transform:translateY(-50%);
+    border:10px solid #000;
+    border-color: transparent black transparent transparent;
+  }
+  .tooltip.arrow-right:before {
+    content: "";
+    position:absolute;
+    right:-20px;
+    top:50%;
+    transform:translateY(-50%);
+    border:10px solid #000;
+    border-color: transparent transparent transparent black;
+  }
+.fade{
+    display: none;
+}

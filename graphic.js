@@ -1,7 +1,5 @@
 class Graphic{
     constructor(canvas, options){
-        this.context = canvas.getContext(`2d`);
-        this.canvas = canvas;
         this.model_field = 'model';
         this.name_field = 'name';
         this.price_field = 'price';
@@ -10,31 +8,79 @@ class Graphic{
         this.text_color = '#222222';
         this.lines_color = '#AAAAAA';
         this.circles_color = '#555555';
+        this.circle_distance = 1;
         this.first_drives = [
             {drive: 'FWD', color: '#00B050'},
             {drive: '4WD', color: '#FF0000'}
         ];
-        this.radius = 7;
+        this.radius = 4;
         Object.assign(this, options);
-        this.canvas.addEventListener('click', this.click_handle.bind(this));
+        this.canvas = canvas;
+        this.context = canvas.getContext(`2d`);
+        this.show = false;
+        let tooltip = document.createElement('div');
+        tooltip.classList.add('tooltip');
+        tooltip.classList.add('fade');
+        document.body.appendChild(tooltip);
+        this.tooltip = tooltip;
+        this.canvas.addEventListener('mousemove', this.mouse_handle.bind(this));
     }
-    click_handle(event){
-        let rect = this.canvas.getBoundingClientRect();
-        let x = event.clientX - rect.left;
-        let y = event.clientY - rect.top;
-        for(let obj of this.points){
+    mouse_handle(event){
+        let x = event.offsetX;
+        let y = event.offsetY;
+        if(x <= this.xOffset || y <= this.yOffset || x >= this.canvas.width) 
+            return;
+        let model_index = Math.floor((x - this.xOffset) / this.mid_width);
+        let found = false;
+        for(let obj of this.points[model_index]){
             let x1 = obj.x + this.radius, x2 = obj.x - this.radius;
             let y1 = obj.y + this.radius, y2 = obj.y - this.radius;
             if(x > x2 && x < x1 && y > y2 && y < y1){
-                let auto = {};
-                Object.assign(auto, this.data[obj.model][obj.index]);
-                auto.price = this.price_format(auto.price);
-                this.callback(auto);
+                if(!this.show){
+                    this.show = true;
+                    let rect = this.canvas.getBoundingClientRect();
+                    let data = {
+                        x: obj.x,
+                        y: obj.y,
+                        top: rect.top,
+                        left: rect.left 
+                    };
+                    this.show_tooltip(this.data[obj.model][obj.index], data);
+                }
+                found = true;
+                break;
             }
         }
+        if(!found && this.show){
+            this.show = false;
+            this.hide_tooltip();
+        }
     }
-    setClickCallback(callback){
-        this.callback = callback;
+    show_tooltip(auto, data){
+        let auto_name = auto[this.name_field];
+        let auto_price = this.price_format(auto[this.price_field]);
+        let content = "<p>" + auto_name + "</p><p>" + auto_price + "&#8381;</p>";
+        this.tooltip.innerHTML = content;
+        this.tooltip.classList.remove('fade');
+        let offsetX = 15;
+        let baseX = data.left + data.x;
+        let baseY = data.top + data.y;
+        let x = baseX + offsetX;
+        if(data.x + this.tooltip.offsetWidth + offsetX >= this.canvas.width){
+            x = baseX - this.tooltip.offsetWidth - offsetX;
+            this.tooltip.classList.add('arrow-right');
+        }else{
+            this.tooltip.classList.add('arrow-left');
+        }
+        let y = baseY - this.tooltip.offsetHeight / 2;
+        this.tooltip.style.setProperty('left', x + 'px');
+        this.tooltip.style.setProperty('top', y + 'px');
+    }
+    hide_tooltip(){
+        this.tooltip.innerHTML = '';
+        this.tooltip.classList.add('fade');
+        this.tooltip.classList.remove('arrow-left');
+        this.tooltip.classList.remove('arrow-right');
     }
     init(data){
         this.data = {};
@@ -131,8 +177,8 @@ class Graphic{
         let y_line = this.canvas.height - this.yOffset * 2;
         let divider = price_line / y_line;
         let mid_width = this.mid_width;
-        let max_amount = Math.floor((mid_width - 10) / (this.radius + 0.5) / 2);
-        this.points = [];
+        let max_amount = Math.floor((mid_width - 10) / (this.radius + this.circle_distance) / 2);
+        this.points = {};
         for(let model_index = 0; model_index < this.models.length; ++model_index){
             const model = this.models[model_index];
             let counter = 0;
@@ -147,12 +193,15 @@ class Graphic{
                     drives[auto[this.drive_field]].was = true
                     this.set_color(drives[auto[this.drive_field]].color);
                 }
-                let offset = 2 * (this.radius + 0.5) * counter + this.radius + 5;
+                let offset = 2 * (this.radius + this.circle_distance) * counter + this.radius + 5;
                 let x = this.xOffset + model_index * mid_width + offset;
                 let y = (auto[this.price_field] - this.min_price) / divider + this.yOffset;
-                this.points.push({x: x, y: y, index: auto_index, model: model});
+                if(!this.points[model_index]){
+                    this.points[model_index] = [];
+                }
+                this.points[model_index].push({x: x, y: y, index: auto_index, model: model});
                 this.context.beginPath();
-                this.context.arc(x, y, this.radius, 0, 2 * Math.PI, false);
+                this.context.arc(x, y, this.radius, 0, 2 * Math.PI);
                 this.context.fill();
                 if(counter == max_amount - 1){
                     counter = 0;
