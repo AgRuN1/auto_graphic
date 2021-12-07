@@ -5,19 +5,20 @@ document.addEventListener("DOMContentLoaded", function(){
         const canvas = document.getElementById('field');
         let gr = new Graphic(canvas, {
             model_field: 'model',
-            name_field: 'name',
-            price_field: 'price',
-            drive_field: 'drive',
-            unique: true,
+            name_field: 'trim',
+            price_field: 'final_price',
+            first_price_field: 'first_price',
             text_color: '#222222',
             lines_color: '#AAAAAA',
             circles_color: '#555555',
+            models_font: "normal bold 18px Arial",
+            prices_font:"italic 12px Arial",
             circle_distance: 1,
             radius: 4,
-            first_drives: [
-                {drive: 'FWD', color: '#00B050'},
-                {drive: '4WD', color: '#FF0000'}
-            ]
+            first_price_colors: {
+                'AT': '#00B050',
+                '4WD': '#FF0000'
+            }
         });
         gr.init(data);
         gr.draw()

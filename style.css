@@ -16,11 +16,18 @@ html, body{
     border-radius: 7px;
     margin-top: 5px
 }
-.fwd{
+.at{
     background-color: #00B050;
 }
-.at{
+.wd{
     background-color: #FF0000;
+}
+.excel{
+    background-color: #0d6efd;
+    text-decoration: none;
+}
+.excel:hover{
+    background-color: #0B5DD5;
 }
 .tooltip{
     position: absolute;

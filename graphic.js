@@ -3,16 +3,13 @@ class Graphic{
         this.model_field = 'model';
         this.name_field = 'name';
         this.price_field = 'price';
-        this.drive_field = 'drive';
-        this.unique = true;
+        this.first_price_field = 'first_price';
         this.text_color = '#222222';
         this.lines_color = '#AAAAAA';
         this.circles_color = '#555555';
+        this.models_font = "italic 18px Arial";
+        this.prices_font = "italic 12px Arial";
         this.circle_distance = 1;
-        this.first_drives = [
-            {drive: 'FWD', color: '#00B050'},
-            {drive: '4WD', color: '#FF0000'}
-        ];
         this.radius = 4;
         Object.assign(this, options);
         this.canvas = canvas;
@@ -28,7 +25,7 @@ class Graphic{
     mouse_handle(event){
         let x = event.offsetX;
         let y = event.offsetY;
-        if(x <= this.xOffset || y <= this.yOffset || x >= this.canvas.width) 
+        if(x <= this.xOffset || y <= this.yOffset || x >= this.canvas.width)
             return;
         let model_index = Math.floor((x - this.xOffset) / this.mid_width);
         let found = false;
@@ -67,7 +64,7 @@ class Graphic{
         let baseY = data.top + data.y;
         let x = baseX + offsetX;
         if(data.x + this.tooltip.offsetWidth + offsetX >= this.canvas.width){
-            x = baseX - this.tooltip.offsetWidth - offsetX;
+            x = baseX - this.tooltip.offsetWidth - offsetX + 4;
             this.tooltip.classList.add('arrow-right');
         }else{
             this.tooltip.classList.add('arrow-left');
@@ -90,18 +87,7 @@ class Graphic{
             if(!this.data[elem[this.model_field]]){
                 this.data[elem[this.model_field]] = [];
             }
-            let flag = true;
-            if(this.unique){
-                for(let i = 0; i < this.data[elem[this.model_field]].length; ++i){
-                    if(this.data[elem[this.model_field]][i][this.name_field] == elem[this.name_field]){
-                        flag = false;
-                        break;
-                    }
-                }
-            }
-            if(flag){
-                this.data[elem[this.model_field]].push(elem);
-            }
+            this.data[elem[this.model_field]].push(elem);
             if(this.min_price == 0 || this.min_price > elem[this.price_field]){
                 this.min_price = elem[this.price_field];
             }
@@ -140,11 +126,11 @@ class Graphic{
         this.context.strokeStyle = color;
     }
     draw_models(){
-        this.context.font = "italic 15pt Arial";
+        this.context.font = this.models_font;
         let mid_width = this.mid_width;
         for(let i = 0; i < this.models.length; ++i){
             let model = this.models[i];
-            let offset = mid_width / 2 - model.length * 5;
+            let offset = mid_width / 2 - model.length * 4;
             this.set_color(this.text_color);
             this.context.fillText(model, this.xOffset + i * mid_width + offset, 30);
             this.context.beginPath();
@@ -155,7 +141,7 @@ class Graphic{
         }
     }
     draw_prices(){
-        this.context.font = "italic 10pt Arial";
+        this.context.font = this.prices_font;
         let count = (this.max_price - this.min_price) / this.precision;
         let height = (this.canvas.height - this.yOffset * 2) / count;
         for(let i = 0; i <= count; ++i){
@@ -182,20 +168,18 @@ class Graphic{
         for(let model_index = 0; model_index < this.models.length; ++model_index){
             const model = this.models[model_index];
             let counter = 0;
-            let drives = {};
-            for(let elem of this.first_drives){
-                drives[elem.drive] = {color: elem.color, was: false};
-            }
             for(let auto_index = 0; auto_index < this.data[model].length; ++auto_index){
                 this.set_color(this.circles_color);
                 let auto = this.data[model][auto_index];
-                if(drives[auto[this.drive_field]].was == false){
-                    drives[auto[this.drive_field]].was = true
-                    this.set_color(drives[auto[this.drive_field]].color);
+                if(auto[this.first_price_field]){
+                    let color = this.first_price_colors[auto[this.first_price_field]];
+                    color = color || this.circles_color;
+                    this.set_color(color);
                 }
                 let offset = 2 * (this.radius + this.circle_distance) * counter + this.radius + 5;
                 let x = this.xOffset + model_index * mid_width + offset;
-                let y = (auto[this.price_field] - this.min_price) / divider + this.yOffset;
+                let price = auto[this.price_field];
+                let y = (price - this.min_price) / divider + this.yOffset - this.radius;
                 if(!this.points[model_index]){
                     this.points[model_index] = [];
                 }
